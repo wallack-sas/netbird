@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dexidp/dex/storage"
 )
@@ -206,7 +207,7 @@ func buildOIDCConnectorConfig(cfg *ConnectorConfig, redirectURI string) ([]byte,
 		"clientID":             cfg.ClientID,
 		"clientSecret":         cfg.ClientSecret,
 		"redirectURI":          redirectURI,
-		"scopes":               []string{"openid", "profile", "email"},
+		"scopes":               []string{"openid", "profile", "email", "groups"},
 		"insecureEnableGroups": true,
 		//some providers don't return email verified, so we need to skip it if not present (e.g., Entra, Okta, Duo)
 		"insecureSkipEmailVerified": true,
@@ -220,7 +221,16 @@ func buildOIDCConnectorConfig(cfg *ConnectorConfig, redirectURI string) ([]byte,
 		oidcConfig["scopes"] = []string{"openid", "profile", "email", "groups"}
 	case "pocketid":
 		oidcConfig["scopes"] = []string{"openid", "profile", "email", "groups"}
+		
+	default:
+		oidcConfig["claimMapping"] = map[string]string{
+			"groups": "organization_tags",
+		}
 	}
+	configJSON, _ := json.Marshal(oidcConfig)
+	log.Debugf("=== DEX OIDC CONFIG GENERATED ===")
+	log.Debugf("Connector Type was: '%s'", cfg.Type)
+	log.Debugf("Final Config for Dex: %s", string(configJSON))
 	return encodeConnectorConfig(oidcConfig)
 }
 
