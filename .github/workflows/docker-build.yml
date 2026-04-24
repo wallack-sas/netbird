@@ -1,0 +1,60 @@
+name: Build and Push Netbird Images
+
+on:
+  push:
+    branches:
+      - 'release/0.68.3-wallack'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: reverse-proxy
+            dockerfile: ./proxy/Dockerfile.multistage
+          - image_name: netbird-server
+            dockerfile: ./combined/Dockerfile.multistage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Étape cruciale pour Go : configurer l'environnement si nécessaire
+      # Mais docker-build-action s'en occupe généralement via le Dockerfile
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}
+          tags: |
+            # On nettoie le nom de la branche pour Docker (remplace les / par des -)
+            type=ref,event=branch 
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: . # On reste à la racine pour que le Dockerfile voit tout le code Go
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Utilisation du cache pour accélérer les futurs builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
