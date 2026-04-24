@@ -24,6 +24,11 @@ const methods: NonNullable<Data["methods"]> =
 function App() {
   useEffect(() => {
     document.title = "Authentication Required - NetBird Service";
+    
+    // Ajout pour l'Auto-Redirection SSO
+    if (methods.oidc) {
+      globalThis.location.href = methods.oidc;
+    }
   }, []);
 
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +99,11 @@ function App() {
   const hasBothCredentials = methods.password && methods.pin;
   const buttonLabel = activeTab === "password" ? "Sign in" : "Submit";
 
+  // Empêche le rendu de l'interface
+  if (methods.oidc) {
+     return null; 
+  }
+  
   if (submitting === "redirect") {
     return (
       <main className="mt-20">
@@ -104,7 +114,6 @@ function App() {
             <Loader2 className="animate-spin" size={24} />
           </div>
         </Card>
-        <PoweredByNetBird />
       </main>
     );
   }
