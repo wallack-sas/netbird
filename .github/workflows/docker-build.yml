@@ -3,7 +3,7 @@ name: Build and Push Netbird Images
 on:
   push:
     branches:
-      - 'release/0.68.3-wallack'
+      - 'release/*-wallack'
 
 env:
   REGISTRY: ghcr.io
